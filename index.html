@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Sorteio de Duplas · Peteca</title>
+<style>
+  :root {
+    --pri: #0f766e; --pri-esc: #115e59; --pri-claro: #ccfbf1;
+    --fundo: #f8fafc; --card: #ffffff; --texto: #0f172a; --suave: #64748b;
+    --borda: #e2e8f0; --erro: #dc2626; --erro-claro: #fee2e2;
+    --alerta: #b45309; --alerta-claro: #fef3c7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--fundo); color: var(--texto);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; }
+  header { background: var(--pri); color: #fff; padding: 14px 16px 0; position: sticky; top: 0; z-index: 5; }
+  header h1 { margin: 0 0 10px; font-size: 1.15rem; }
+  nav { display: flex; gap: 4px; }
+  nav button { flex: 1; background: transparent; color: #d1fae5; border: 0; padding: 12px 4px;
+    font-size: .95rem; font-weight: 600; border-bottom: 3px solid transparent; cursor: pointer; }
+  nav button.ativo { color: #fff; border-bottom-color: #fff; }
+  nav button:disabled { opacity: .45; cursor: not-allowed; }
+  main { max-width: 900px; margin: 0 auto; padding: 16px 12px 120px; }
+  .card { background: var(--card); border: 1px solid var(--borda); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 10px; font-size: 1.05rem; }
+  label.campo { display: block; font-size: .85rem; color: var(--suave); margin-bottom: 4px; }
+  input[type=text], input[type=number] { width: 100%; font-size: 1rem; padding: 12px; border: 1px solid var(--borda);
+    border-radius: 10px; background: #fff; color: var(--texto); min-height: 48px; }
+  input:focus { outline: 2px solid var(--pri); outline-offset: 0; border-color: var(--pri); }
+  .linha-config { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+  .colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .colunas { grid-template-columns: 1fr; } .linha-config { grid-template-columns: 1fr 1fr; } .linha-config > :first-child { grid-column: 1 / -1; } }
+  .col-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .col-cab input { font-weight: 700; padding: 8px 10px; min-height: 40px; }
+  .contador { background: var(--pri-claro); color: var(--pri-esc); font-weight: 700; border-radius: 999px;
+    padding: 4px 10px; font-size: .85rem; white-space: nowrap; }
+  .nome-linha { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .nome-linha .num { width: 24px; text-align: right; color: var(--suave); font-size: .85rem; }
+  .nome-linha input.dup { border-color: var(--erro); background: var(--erro-claro); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px;
+    padding: 10px 16px; border-radius: 10px; border: 1px solid var(--borda); background: #fff; color: var(--texto);
+    font-size: 1rem; font-weight: 600; cursor: pointer; }
+  .btn:active { transform: scale(.98); }
+  .btn.pri { background: var(--pri); border-color: var(--pri); color: #fff; }
+  .btn.perigo { color: var(--erro); border-color: #fecaca; }
+  .btn.mini { min-height: 40px; min-width: 40px; padding: 6px 10px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.bloco { width: 100%; }
+  .acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .aviso { border-radius: 10px; padding: 10px 12px; margin: 10px 0; font-size: .95rem; }
+  .aviso.alerta { background: var(--alerta-claro); color: var(--alerta); }
+  .aviso.erro { background: var(--erro-claro); color: var(--erro); }
+  .aviso.info { background: var(--pri-claro); color: var(--pri-esc); }
+  .rodape { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--borda);
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); z-index: 4; }
+  .rodape .dentro { max-width: 900px; margin: 0 auto; display: flex; gap: 8px; }
+  .rodape .btn { flex: 1; font-size: 1.05rem; }
+  .lista-duplas { list-style: none; padding: 0; margin: 0; }
+  .lista-duplas li { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--borda); }
+  .lista-duplas li:last-child { border-bottom: 0; }
+  .lista-duplas .n { background: var(--pri); color: #fff; border-radius: 8px; min-width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+  .lista-duplas .nomes { flex: 1; font-size: 1.05rem; }
+  .lista-duplas .nomes b { font-weight: 700; }
+  .lista-duplas .b-sel { background: var(--alerta-claro); border-radius: 6px; padding: 0 4px; outline: 2px solid var(--alerta); }
+  .lista-duplas .tocavel { cursor: pointer; border-bottom: 1px dashed var(--suave); }
+  .seg { display: flex; border: 1px solid var(--borda); border-radius: 10px; overflow: hidden; }
+  .seg button { flex: 1; border: 0; background: #fff; padding: 12px 8px; font-size: .95rem; font-weight: 600; cursor: pointer; min-height: 48px; }
+  .seg button.ativo { background: var(--pri); color: #fff; }
+  .comparativo { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+  .comparativo div { border: 1px solid var(--borda); border-radius: 10px; padding: 10px; font-size: .92rem; }
+  .comparativo b { display: block; font-size: 1rem; margin-bottom: 4px; }
+  table.jogos { width: 100%; border-collapse: collapse; }
+  table.jogos th, table.jogos td { padding: 10px 6px; border-bottom: 1px solid var(--borda); text-align: left; vertical-align: middle; }
+  table.jogos th { font-size: .8rem; color: var(--suave); text-transform: uppercase; }
+  table.jogos td.num { font-weight: 700; width: 42px; }
+  table.jogos td.x { color: var(--suave); text-align: center; width: 70px; white-space: nowrap; }
+  table.jogos tr.rodada td { background: #f1f5f9; font-weight: 700; font-size: .85rem; color: var(--suave); padding: 6px; }
+  .chave-titulo { font-size: .8rem; color: var(--pri-esc); font-weight: 700; }
+  .vazio { color: var(--suave); text-align: center; padding: 24px 8px; }
+  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #0f172a; color: #fff;
+    padding: 12px 18px; border-radius: 10px; z-index: 50; font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.on { opacity: 1; }
+  /* Apresentação */
+  #apresentacao { position: fixed; inset: 0; background: #0b1220; color: #fff; z-index: 100; display: none;
+    flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; cursor: pointer; user-select: none; }
+  #apresentacao.on { display: flex; }
+  #apres-topo { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  #apres-topo .btn { background: transparent; color: #cbd5e1; border-color: #334155; min-height: 40px; }
+  #apres-titulo { color: #5eead4; font-size: clamp(1rem, 3vw, 1.6rem); font-weight: 700; margin-bottom: 18px; }
+  #apres-nomes { font-size: clamp(2rem, 8vw, 5rem); font-weight: 800; line-height: 1.15; }
+  #apres-nomes .barra { color: #5eead4; display: block; font-size: .6em; margin: 6px 0; }
+  #apres-dica { position: absolute; bottom: 24px; color: #64748b; font-size: 1rem; }
+  .fade { animation: fade .45s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .fade { animation: none; } }
+  /* Impressão */
+  #impressao { display: none; }
+  @media print {
+    body { background: #fff; }
+    header, main, .rodape, .toast, #apresentacao { display: none !important; }
+    #impressao { display: block; font-size: 12pt; color: #000; }
+    #impressao h1 { font-size: 16pt; margin: 0 0 4px; }
+    #impressao h2 { font-size: 13pt; margin: 16px 0 6px; }
+    #impressao table { width: 100%; border-collapse: collapse; }
+    #impressao th, #impressao td { border: 1px solid #000; padding: 6px; text-align: left; }
+    #impressao td.placar { width: 110px; text-align: center; }
+    #impressao .quebra { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏸 Sorteio de Duplas</h1>
+  <nav>
+    <button id="tab-jogadores" class="ativo" onclick="irPara('jogadores')">1. Jogadores</button>
+    <button id="tab-duplas" onclick="irPara('duplas')">2. Duplas</button>
+    <button id="tab-jogos" onclick="irPara('jogos')">3. Jogos</button>
+  </nav>
+</header>
+
+<main>
+  <!-- PASSO 1 -->
+  <section id="sec-jogadores">
+    <div class="card">
+      <div class="linha-config">
+        <div><label class="campo" for="nomeEvento">Nome do evento</label>
+          <input type="text" id="nomeEvento" placeholder="Ex.: Torneio de Peteca do Clube"></div>
+        <div><label class="campo" for="quadras">Quadras</label>
+          <input type="number" id="quadras" min="1" max="10" value="1"></div>
+        <div><label class="campo" for="minutos">Min. por jogo</label>
+          <input type="number" id="minutos" min="5" max="120" value="20"></div>
+      </div>
+    </div>
+
+    <div class="aviso info">Digite um nome por linha. <b>Enter</b> cria a próxima linha. Você pode <b>colar uma lista inteira</b> (até do WhatsApp, com numeração) em qualquer campo.</div>
+
+    <div class="colunas">
+      <div class="card" id="colA"></div>
+      <div class="card" id="colB"></div>
+    </div>
+
+    <div id="avisosJogadores"></div>
+
+    <div class="card">
+      <label style="display:flex; gap:10px; align-items:center; cursor:pointer;">
+        <input type="checkbox" id="parearSobras" style="width:22px; height:22px;">
+        <span>Formar duplas com quem sobrar <small style="color:var(--suave)">(as sobras formam dupla entre si, do mesmo nível)</small></span>
+      </label>
+    </div>
+    <button class="btn perigo bloco" onclick="limparTudo()">Limpar tudo e começar de novo</button>
+  </section>
+
+  <!-- PASSO 2 -->
+  <section id="sec-duplas" hidden>
+    <div class="card">
+      <h2 id="tituloDuplas">Duplas</h2>
+      <div class="aviso info" id="dicaTroca">Para trocar parceiros: toque num nome da coluna B e depois em outro nome da coluna B.</div>
+      <ul class="lista-duplas" id="listaDuplas"></ul>
+      <div id="sobrasBox"></div>
+    </div>
+    <div class="card">
+      <h2>Adicionar dupla manualmente</h2>
+      <p style="margin:0 0 8px; color:var(--suave); font-size:.9rem">Para quem chegou depois ou já veio com dupla formada.</p>
+      <div class="colunas">
+        <input type="text" id="manualA" placeholder="Jogador 1">
+        <input type="text" id="manualB" placeholder="Jogador 2">
+      </div>
+      <div style="margin-top:8px"><button class="btn" onclick="adicionarManual()">+ Adicionar dupla</button></div>
+    </div>
+    <div class="acoes">
+      <button class="btn" onclick="apresentar()">📺 Apresentar sorteio</button>
+      <button class="btn" onclick="copiarDuplas()">📋 Copiar para WhatsApp</button>
+      <button class="btn" onclick="sortearDuplas(true)">🎲 Sortear novamente</button>
+    </div>
+  </section>
+
+  <!-- PASSO 3 -->
+  <section id="sec-jogos" hidden>
+    <div class="card">
+      <h2>Formato</h2>
+      <div class="seg" id="segFormato">
+        <button data-f="todos" class="ativo" onclick="mudarFormato('todos')">Todos contra todos</button>
+        <button data-f="chaves" onclick="mudarFormato('chaves')">Chaves</button>
+      </div>
+      <div id="opChaves" hidden style="margin-top:10px">
+        <label class="campo" for="numChaves">Número de chaves</label>
+        <input type="number" id="numChaves" min="2" max="8" value="2">
+      </div>
+      <div class="comparativo" id="comparativo"></div>
+    </div>
+    <div class="card">
+      <div class="acoes" style="margin-bottom:10px">
+        <button class="btn pri" onclick="sortearJogos()">🎲 Sortear jogos</button>
+        <button class="btn" onclick="copiarJogos()" id="btnCopiarJogos" disabled>📋 Copiar</button>
+        <button class="btn" onclick="window.print()" id="btnImprimir" disabled>🖨️ Imprimir súmula</button>
+      </div>
+      <div id="resumoJogos"></div>
+      <div id="tabelaJogos"><p class="vazio">Escolha o formato e toque em <b>Sortear jogos</b>.</p></div>
+    </div>
+  </section>
+</main>
+
+<div class="rodape"><div class="dentro" id="rodape"></div></div>
+<div class="toast" id="toast"></div>
+
+<div id="apresentacao" onclick="avancarApresentacao()">
+  <div id="apres-topo">
+    <button class="btn" onclick="event.stopPropagation(); revelarTodas()">Revelar todas</button>
+    <button class="btn" onclick="event.stopPropagation(); fecharApresentacao()">✕ Sair</button>
+  </div>
+  <div id="apres-titulo"></div>
+  <div id="apres-nomes"></div>
+  <div id="apres-dica">Toque na tela ou aperte espaço para a próxima dupla</div>
+</div>
+
+<div id="impressao"></div>
+
+<script>
+/* =================== LÓGICA PURA (testável) =================== */
+// Aleatoriedade criptográfica: índice inteiro uniforme em [0, max)
+function aleatorio(max) {
+  const lim = Math.floor(0x100000000 / max) * max;
+  const buf = new Uint32Array(1);
+  let x;
+  do { crypto.getRandomValues(buf); x = buf[0]; } while (x >= lim);
+  return x % max;
+}
+function embaralhar(lista) {
+  const a = lista.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = aleatorio(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function normalizar(nome) {
+  return nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+// Remove numeração/marcadores de listas do WhatsApp: "1. João", "1) João", "- João", "• João", "1 - João"
+function limparLinha(linha) {
+  return linha.replace(/^\s*(\d+\s*[.)\-–:]\s*|[-–•*·]\s*)/, '').replace(/\s+/g, ' ').trim();
+}
+function separarColagem(texto) {
+  return texto.split(/\r?\n/).map(limparLinha).filter(Boolean);
+}
+// Retorna conjunto de nomes normalizados repetidos (na coluna ou entre colunas)
+function encontrarRepetidos(colA, colB) {
+  const cont = new Map();
+  [...colA, ...colB].map(normalizar).filter(Boolean).forEach(n => cont.set(n, (cont.get(n) || 0) + 1));
+  return new Set([...cont].filter(([, c]) => c > 1).map(([n]) => n));
+}
+function sortearPares(colA, colB, parearSobras) {
+  const A = embaralhar(colA), B = embaralhar(colB);
+  const n = Math.min(A.length, B.length);
+  const duplas = [];
+  for (let i = 0; i < n; i++) duplas.push([A[i], B[i]]);
+  let sobras = A.length > n ? A.slice(n) : B.slice(n);
+  const colunaSobra = A.length > n ? 'A' : (B.length > n ? 'B' : null);
+  if (parearSobras && sobras.length >= 2) {
+    const s = embaralhar(sobras);
+    for (let i = 0; i + 1 < s.length; i += 2) duplas.push([s[i], s[i + 1]]);
+    sobras = s.length % 2 ? [s[s.length - 1]] : [];
+  }
+  return { duplas, sobras, colunaSobra };
+}
+// Método do círculo (Berger): cada par se enfrenta uma vez; ninguém joga 2x na mesma rodada
+function roundRobin(times) {
+  const t = times.slice();
+  if (t.length % 2) t.push(null);
+  const n = t.length, rodadas = [];
+  for (let r = 0; r < n - 1; r++) {
+    const jogos = [];
+    for (let i = 0; i < n / 2; i++) {
+      const a = t[i], b = t[n - 1 - i];
+      if (a !== null && b !== null) jogos.push(r % 2 ? [b, a] : [a, b]);
+    }
+    rodadas.push(jogos);
+    t.splice(1, 0, t.pop());
+  }
+  return rodadas;
+}
+// Distribui em chaves em serpentina (diferença máxima de 1 entre chaves)
+function distribuirChaves(itens, numChaves) {
+  const chaves = Array.from({ length: numChaves }, () => []);
+  itens.forEach((it, i) => {
+    const volta = Math.floor(i / numChaves), pos = i % numChaves;
+    chaves[volta % 2 ? numChaves - 1 - pos : pos].push(it);
+  });
+  return chaves;
+}
+// Ordena para evitar que a mesma dupla jogue em jogos seguidos (quando houver alternativa)
+function ordenarComDescanso(jogos) {
+  const resto = jogos.slice(), saida = [];
+  while (resto.length) {
+    const ult = saida[saida.length - 1];
+    let idx = 0;
+    if (ult) {
+      const ocupados = new Set([ult.a, ult.b]);
+      const achou = resto.findIndex(j => !ocupados.has(j.a) && !ocupados.has(j.b));
+      if (achou >= 0) idx = achou;
+    }
+    saida.push(resto.splice(idx, 1)[0]);
+  }
+  return saida;
+}
+// Monta a tabela completa: ids de duplas -> lista de jogos {a, b, chave, rodada}
+function gerarTabela(idsDuplas, formato, numChaves) {
+  const ids = embaralhar(idsDuplas);
+  const grupos = formato === 'chaves' ? distribuirChaves(ids, numChaves) : [ids];
+  const rodadasPorGrupo = grupos.map(g => roundRobin(g));
+  const maxR = Math.max(0, ...rodadasPorGrupo.map(r => r.length));
+  const jogos = [];
+  for (let r = 0; r < maxR; r++) {
+    rodadasPorGrupo.forEach((rods, gi) => {
+      (rods[r] || []).forEach(([a, b]) => jogos.push({ a, b, chave: gi, rodada: r + 1 }));
+    });
+  }
+  return { grupos, jogos: ordenarComDescanso(jogos) };
+}
+function contarJogos(n, formato, numChaves) {
+  if (formato === 'todos') return n * (n - 1) / 2;
+  return distribuirChaves(Array.from({ length: n }, (_, i) => i), numChaves)
+    .reduce((s, g) => s + g.length * (g.length - 1) / 2, 0);
+}
+function estimarTempo(nJogos, quadras, minutos) {
+  const total = Math.ceil(nJogos / Math.max(1, quadras)) * minutos;
+  const h = Math.floor(total / 60), m = total % 60;
+  return h ? `${h}h${m ? String(m).padStart(2, '0') : ''}` : `${m} min`;
+}
+/* =================== FIM DA LÓGICA PURA =================== */
+
+const CHAVE_STORAGE = 'sorteio-peteca-v1';
+const LETRAS = 'ABCDEFGH';
+let estado = {
+  evento: '', quadras: 1, minutos: 20,
+  tituloA: 'Experientes', tituloB: 'Iniciantes',
+  colA: [''], colB: [''], parearSobras: false,
+  duplas: [], sobras: [], colunaSobra: null, proxId: 1,
+  formato: 'todos', numChaves: 2, tabela: null, aba: 'jogadores'
+};
+let selecaoTroca = null;
+
+function salvar() { try { localStorage.setItem(CHAVE_STORAGE, JSON.stringify(estado)); } catch (e) {} }
+function carregar() {
+  try { const s = JSON.parse(localStorage.getItem(CHAVE_STORAGE)); if (s) estado = Object.assign(estado, s); } catch (e) {}
+}
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1800);
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function nomeDupla(d) { return `${d.a} / ${d.b}`; }
+function duplaPorId(id) { return estado.duplas.find(d => d.id === id); }
+function nomesLimpos(col) { return estado[col].map(s => s.trim()).filter(Boolean); }
+
+/* ---------- Navegação ---------- */
+function irPara(aba) {
+  if (aba !== 'jogadores' && !estado.duplas.length) return;
+  estado.aba = aba; salvar();
+  ['jogadores', 'duplas', 'jogos'].forEach(a => {
+    document.getElementById('sec-' + a).hidden = a !== aba;
+    document.getElementById('tab-' + a).classList.toggle('ativo', a === aba);
+  });
+  render(); window.scrollTo(0, 0);
+}
+
+/* ---------- Passo 1: colunas ---------- */
+function renderColuna(col) {
+  const box = document.getElementById(col === 'colA' ? 'colA' : 'colB');
+  const tituloKey = col === 'colA' ? 'tituloA' : 'tituloB';
+  const rep = encontrarRepetidos(nomesLimpos('colA'), nomesLimpos('colB'));
+  const linhas = estado[col].map((v, i) => `
+    <div class="nome-linha">
+      <span class="num">${i + 1}</span>
+      <input type="text" value="${esc(v)}" data-col="${col}" data-i="${i}"
+        class="${v.trim() && rep.has(normalizar(v)) ? 'dup' : ''}" placeholder="Nome"
+        autocomplete="off" autocapitalize="words" enterkeyhint="next">
+      <button class="btn mini" title="Remover" aria-label="Remover linha" onclick="removerLinha('${col}', ${i})">✕</button>
+    </div>`).join('');
+  box.innerHTML = `
+    <div class="col-cab">
+      <input type="text" value="${esc(estado[tituloKey])}" data-titulo="${tituloKey}" aria-label="Título da coluna">
+      <span class="contador">${nomesLimpos(col).length}</span>
+    </div>
+    ${linhas}
+    <button class="btn bloco" onclick="adicionarLinha('${col}')">+ Adicionar nome</button>`;
+}
+// Foco síncrono: com setTimeout, teclas digitadas rápido se perdem e o teclado do iPhone fecha
+function focar(col, i) {
+  const el = document.querySelector(`input[data-col="${col}"][data-i="${i}"]`);
+  if (el) el.focus();
+}
+function adicionarLinha(col, apos) {
+  const i = apos === undefined ? estado[col].length : apos + 1;
+  estado[col].splice(i, 0, ''); salvar(); renderJogadores(); focar(col, i);
+}
+function removerLinha(col, i) {
+  estado[col].splice(i, 1);
+  if (!estado[col].length) estado[col].push('');
+  salvar(); renderJogadores();
+}
+function renderAvisosJogadores() {
+  const A = nomesLimpos('colA'), B = nomesLimpos('colB');
+  const rep = encontrarRepetidos(A, B);
+  let html = '';
+  if (rep.size) html += `<div class="aviso erro">Nomes repetidos (marcados em vermelho). Diferencie, por exemplo: "João Silva" e "João Pedro".</div>`;
+  if (A.length && B.length && A.length !== B.length) {
+    const dif = Math.abs(A.length - B.length);
+    const col = A.length > B.length ? estado.tituloA : estado.tituloB;
+    html += `<div class="aviso alerta"><b>${col}</b> tem ${dif} nome${dif > 1 ? 's' : ''} a mais: ${dif} jogador${dif > 1 ? 'es ficarão' : ' ficará'} sem dupla${estado.parearSobras && dif >= 2 ? ' (ou formarão dupla entre si)' : ''}.</div>`;
+  }
+  document.getElementById('avisosJogadores').innerHTML = html;
+}
+function renderJogadores() {
+  document.getElementById('nomeEvento').value = estado.evento;
+  document.getElementById('quadras').value = estado.quadras;
+  document.getElementById('minutos').value = estado.minutos;
+  document.getElementById('parearSobras').checked = estado.parearSobras;
+  renderColuna('colA'); renderColuna('colB'); renderAvisosJogadores(); renderRodape();
+}
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.col) {
+    estado[t.dataset.col][+t.dataset.i] = t.value; salvar();
+    const rep = encontrarRepetidos(nomesLimpos('colA'), nomesLimpos('colB'));
+    document.querySelectorAll('input[data-col]').forEach(el => el.classList.toggle('dup', !!el.value.trim() && rep.has(normalizar(el.value))));
+    document.querySelectorAll('#colA .contador')[0].textContent = nomesLimpos('colA').length;
+    document.querySelectorAll('#colB .contador')[0].textContent = nomesLimpos('colB').length;
+    renderAvisosJogadores(); renderRodape();
+  } else if (t.dataset.titulo) {
+    estado[t.dataset.titulo] = t.value; salvar();
+  } else if (t.id === 'nomeEvento') { estado.evento = t.value; salvar(); }
+  else if (t.id === 'quadras') { estado.quadras = Math.max(1, parseInt(t.value) || 1); salvar(); renderComparativo(); }
+  else if (t.id === 'minutos') { estado.minutos = Math.max(1, parseInt(t.value) || 20); salvar(); renderComparativo(); }
+  else if (t.id === 'numChaves') { estado.numChaves = parseInt(t.value) || 2; salvar(); renderComparativo(); }
+  else if (t.id === 'parearSobras') { estado.parearSobras = t.checked; salvar(); renderAvisosJogadores(); }
+});
+document.addEventListener('change', e => { if (e.target.id === 'parearSobras') { estado.parearSobras = e.target.checked; salvar(); renderAvisosJogadores(); } });
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (!t.dataset || !t.dataset.col) return;
+  const col = t.dataset.col, i = +t.dataset.i;
+  if (e.key === 'Enter') { e.preventDefault(); adicionarLinha(col, i); }
+  else if (e.key === 'Backspace' && t.value === '' && estado[col].length > 1) {
+    e.preventDefault(); estado[col].splice(i, 1); salvar(); renderJogadores(); focar(col, Math.max(0, i - 1));
+  }
+});
+document.addEventListener('paste', e => {
+  const t = e.target;
+  if (!t.dataset || !t.dataset.col) return;
+  const texto = (e.clipboardData || window.clipboardData).getData('text');
+  const nomes = separarColagem(texto);
+  if (nomes.length <= 1 && !/^\s*(\d+\s*[.)\-–:]|[-–•*·])/.test(texto)) return; // colagem simples: deixa o navegador agir
+  e.preventDefault();
+  const col = t.dataset.col, i = +t.dataset.i;
+  const atual = estado[col][i].trim();
+  const novos = atual ? [atual, ...nomes] : nomes;
+  estado[col].splice(i, 1, ...novos);
+  salvar(); renderJogadores(); focar(col, i + novos.length - 1);
+  toast(`${nomes.length} nome${nomes.length > 1 ? 's' : ''} adicionado${nomes.length > 1 ? 's' : ''}`);
+});
+function limparTudo() {
+  if (!confirm('Apagar todos os nomes, duplas e jogos?')) return;
+  const ev = estado.evento, q = estado.quadras, m = estado.minutos, tA = estado.tituloA, tB = estado.tituloB;
+  estado = Object.assign(estado, { colA: [''], colB: [''], duplas: [], sobras: [], colunaSobra: null, tabela: null, proxId: 1, aba: 'jogadores' });
+  Object.assign(estado, { evento: ev, quadras: q, minutos: m, tituloA: tA, tituloB: tB });
+  salvar(); irPara('jogadores');
+}
+
+/* ---------- Passo 2: duplas ---------- */
+function sortearDuplas(confirmar) {
+  const A = nomesLimpos('colA'), B = nomesLimpos('colB');
+  if (!A.length || !B.length) { toast('Preencha as duas colunas'); return; }
+  if (encontrarRepetidos(A, B).size) { toast('Corrija os nomes repetidos'); irPara('jogadores'); return; }
+  if (confirmar && estado.tabela && !confirm('Sortear novamente apaga a tabela de jogos atual. Continuar?')) return;
+  if (confirmar && !estado.tabela && !confirm('Sortear as duplas novamente?')) return;
+  const r = sortearPares(A, B, estado.parearSobras);
+  estado.duplas = r.duplas.map(([a, b]) => ({ id: estado.proxId++, a, b }));
+  estado.sobras = r.sobras; estado.colunaSobra = r.colunaSobra; estado.tabela = null; selecaoTroca = null;
+  salvar(); irPara('duplas'); toast(`${estado.duplas.length} duplas sorteadas`);
+}
+function renderDuplas() {
+  document.getElementById('tituloDuplas').textContent = `Duplas (${estado.duplas.length})`;
+  document.getElementById('dicaTroca').hidden = estado.duplas.length < 2;
+  document.getElementById('listaDuplas').innerHTML = estado.duplas.map((d, i) => `
+    <li>
+      <span class="n">${i + 1}</span>
+      <span class="nomes"><b>${esc(d.a)}</b> / <span class="tocavel ${selecaoTroca === d.id ? 'b-sel' : ''}" onclick="tocarB(${d.id})">${esc(d.b)}</span></span>
+      <button class="btn mini perigo" aria-label="Remover dupla" onclick="removerDupla(${d.id})">✕</button>
+    </li>`).join('') || '<li class="vazio">Nenhuma dupla.</li>';
+  const sb = document.getElementById('sobrasBox');
+  sb.innerHTML = estado.sobras.length
+    ? `<div class="aviso alerta"><b>Sem dupla:</b> ${estado.sobras.map(esc).join(', ')}</div>` : '';
+}
+function tocarB(id) {
+  if (selecaoTroca === null) { selecaoTroca = id; renderDuplas(); return; }
+  if (selecaoTroca === id) { selecaoTroca = null; renderDuplas(); return; }
+  const d1 = duplaPorId(selecaoTroca), d2 = duplaPorId(id);
+  [d1.b, d2.b] = [d2.b, d1.b];
+  selecaoTroca = null; estado.tabela = null; salvar(); renderDuplas(); toast('Parceiros trocados');
+}
+function removerDupla(id) {
+  const d = duplaPorId(id);
+  if (!confirm(`Remover a dupla ${nomeDupla(d)}?`)) return;
+  estado.duplas = estado.duplas.filter(x => x.id !== id); estado.tabela = null; salvar(); render();
+}
+function adicionarManual() {
+  const a = document.getElementById('manualA').value.trim(), b = document.getElementById('manualB').value.trim();
+  if (!a || !b) { toast('Preencha os dois nomes'); return; }
+  const todos = estado.duplas.flatMap(d => [d.a, d.b]).map(normalizar);
+  if (normalizar(a) === normalizar(b) || todos.includes(normalizar(a)) || todos.includes(normalizar(b))) { toast('Esse jogador já está em uma dupla'); return; }
+  estado.duplas.push({ id: estado.proxId++, a, b });
+  if (estado.tabela && !confirm('Já existe tabela de jogos. Adicionar a dupla apaga a tabela para sortear de novo. Continuar?')) { estado.duplas.pop(); return; }
+  estado.tabela = null;
+  document.getElementById('manualA').value = ''; document.getElementById('manualB').value = '';
+  salvar(); render(); toast('Dupla adicionada');
+}
+async function copiarTexto(texto) {
+  try {
+    if (navigator.share && /Android|iPhone|iPad/i.test(navigator.userAgent)) { await navigator.share({ text: texto }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(texto); toast('Copiado!'); return; } catch (e) {}
+  const ta = document.createElement('textarea'); ta.value = texto; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('Copiado!'); } catch (e) { alert(texto); }
+  ta.remove();
+}
+function copiarDuplas() {
+  let t = `🏸 Duplas sorteadas${estado.evento ? ' — ' + estado.evento : ''}\n`;
+  estado.duplas.forEach((d, i) => { t += `${i + 1}. ${nomeDupla(d)}\n`; });
+  if (estado.sobras.length) t += `Sem dupla: ${estado.sobras.join(', ')}\n`;
+  copiarTexto(t);
+}
+
+/* ---------- Apresentação ---------- */
+let apresIdx = 0;
+function apresentar() {
+  if (!estado.duplas.length) return;
+  apresIdx = 0; document.getElementById('apresentacao').classList.add('on'); mostrarApres();
+  if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+}
+function mostrarApres() {
+  const tit = document.getElementById('apres-titulo'), nom = document.getElementById('apres-nomes');
+  const total = estado.duplas.length;
+  if (apresIdx === 0) {
+    tit.textContent = estado.evento || 'Sorteio das duplas';
+    nom.innerHTML = `<span style="font-size:.55em">${total} duplas</span>`;
+  } else if (apresIdx <= total) {
+    const d = estado.duplas[apresIdx - 1];
+    tit.textContent = `Dupla ${apresIdx} de ${total}`;
+    nom.innerHTML = `${esc(d.a)}<span class="barra">&amp;</span>${esc(d.b)}`;
+  } else {
+    tit.textContent = estado.sobras.length ? 'Sem dupla' : 'Fim do sorteio';
+    nom.innerHTML = estado.sobras.length ? `<span style="font-size:.6em">${estado.sobras.map(esc).join('<br>')}</span>` : '🏸 Bons jogos!';
+  }
+  nom.classList.remove('fade'); void nom.offsetWidth; nom.classList.add('fade');
+}
+function avancarApresentacao() { if (apresIdx <= estado.duplas.length) { apresIdx++; mostrarApres(); } }
+function revelarTodas() {
+  const nom = document.getElementById('apres-nomes');
+  document.getElementById('apres-titulo').textContent = 'Todas as duplas';
+  nom.innerHTML = `<div style="font-size:clamp(1rem,2.6vw,1.8rem); line-height:1.6; text-align:left">${estado.duplas.map((d, i) => `${i + 1}. ${esc(nomeDupla(d))}`).join('<br>')}</div>`;
+  apresIdx = estado.duplas.length + 1;
+}
+function fecharApresentacao() {
+  document.getElementById('apresentacao').classList.remove('on');
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('apresentacao').classList.contains('on')) return;
+  if ([' ', 'ArrowRight', 'Enter'].includes(e.key)) { e.preventDefault(); avancarApresentacao(); }
+  if (e.key === 'Escape') fecharApresentacao();
+});
+
+/* ---------- Passo 3: jogos ---------- */
+function mudarFormato(f) {
+  if (estado.tabela && !confirm('Mudar o formato apaga a tabela atual. Continuar?')) return;
+  estado.formato = f; estado.tabela = null; salvar(); render();
+}
+function renderComparativo() {
+  const n = estado.duplas.length;
+  const box = document.getElementById('comparativo');
+  if (n < 2) { box.innerHTML = '<div class="aviso alerta">São necessárias pelo menos 2 duplas.</div>'; return; }
+  const q = estado.quadras, m = estado.minutos;
+  const jt = contarJogos(n, 'todos');
+  let html = `<div><b>Todos contra todos</b>${jt} jogos · ~${estimarTempo(jt, q, m)}<br><small>Cada dupla joga ${n - 1} vezes</small></div>`;
+  [2, 4].forEach(k => {
+    if (n >= k * 2) {
+      const jc = contarJogos(n, 'chaves', k);
+      const menor = Math.floor(n / k);
+      html += `<div><b>${k} chaves</b>${jc} jogos · ~${estimarTempo(jc, q, m)}<br><small>Cada dupla joga ${menor - 1}${n % k ? ' a ' + menor : ''} vezes (+ fase final na súmula)</small></div>`;
+    }
+  });
+  box.innerHTML = html;
+}
+function sortearJogos() {
+  const n = estado.duplas.length;
+  if (n < 2) { toast('São necessárias pelo menos 2 duplas'); return; }
+  let k = estado.numChaves;
+  if (estado.formato === 'chaves') {
+    k = Math.max(2, Math.min(8, k));
+    if (n / k < 2) { toast(`Com ${n} duplas, use no máximo ${Math.floor(n / 2)} chaves`); return; }
+  }
+  if (estado.tabela && !confirm('Sortear os jogos novamente?')) return;
+  const t = gerarTabela(estado.duplas.map(d => d.id), estado.formato, k);
+  estado.tabela = { formato: estado.formato, numChaves: k, grupos: t.grupos, jogos: t.jogos };
+  salvar(); render(); toast(`${t.jogos.length} jogos sorteados`);
+}
+function rotuloChave(i) { return `Chave ${LETRAS[i]}`; }
+function renderJogos() {
+  document.querySelectorAll('#segFormato button').forEach(b => b.classList.toggle('ativo', b.dataset.f === estado.formato));
+  document.getElementById('opChaves').hidden = estado.formato !== 'chaves';
+  document.getElementById('numChaves').value = estado.numChaves;
+  renderComparativo();
+  const tb = estado.tabela;
+  document.getElementById('btnCopiarJogos').disabled = !tb;
+  document.getElementById('btnImprimir').disabled = !tb;
+  if (!tb) {
+    document.getElementById('resumoJogos').innerHTML = '';
+    document.getElementById('tabelaJogos').innerHTML = '<p class="vazio">Escolha o formato e toque em <b>Sortear jogos</b>.</p>';
+    return;
+  }
+  let resumo = `<div class="aviso info">${tb.jogos.length} jogos · cerca de ${estimarTempo(tb.jogos.length, estado.quadras, estado.minutos)} com ${estado.quadras} quadra${estado.quadras > 1 ? 's' : ''}</div>`;
+  if (tb.formato === 'chaves') {
+    resumo += tb.grupos.map((g, i) => `<div class="card" style="margin-bottom:8px"><div class="chave-titulo">${rotuloChave(i)}</div>${g.map(id => esc(nomeDupla(duplaPorId(id) || { a: '?', b: '?' }))).join('<br>')}</div>`).join('');
+  }
+  document.getElementById('resumoJogos').innerHTML = resumo;
+  const chaves = tb.formato === 'chaves';
+  const linhas = tb.jogos.map((j, i) => {
+    const qd = estado.quadras > 1 ? `<br><small style="color:var(--suave)">Quadra ${(i % estado.quadras) + 1}</small>` : '';
+    const ch = chaves ? `<br><span class="chave-titulo">${rotuloChave(j.chave)}</span>` : '';
+    return `<tr><td class="num">${i + 1}${qd}</td><td>${esc(nomeDupla(duplaPorId(j.a)))}${ch}</td><td class="x">___ × ___</td><td>${esc(nomeDupla(duplaPorId(j.b)))}</td></tr>`;
+  }).join('');
+  document.getElementById('tabelaJogos').innerHTML = `<table class="jogos"><thead><tr><th>Jogo</th><th>Dupla</th><th></th><th>Dupla</th></tr></thead><tbody>${linhas}</tbody></table>`;
+  renderImpressao();
+}
+function copiarJogos() {
+  const tb = estado.tabela; if (!tb) return;
+  let t = `🏸 Jogos${estado.evento ? ' — ' + estado.evento : ''}\n`;
+  if (tb.formato === 'chaves') {
+    tb.grupos.forEach((g, i) => { t += `\n${rotuloChave(i)}:\n` + g.map(id => '• ' + nomeDupla(duplaPorId(id))).join('\n') + '\n'; });
+    t += '\n';
+  }
+  tb.jogos.forEach((j, i) => { t += `Jogo ${i + 1}: ${nomeDupla(duplaPorId(j.a))} × ${nomeDupla(duplaPorId(j.b))}${tb.formato === 'chaves' ? ' (' + rotuloChave(j.chave) + ')' : ''}\n`; });
+  copiarTexto(t);
+}
+function renderImpressao() {
+  const tb = estado.tabela; if (!tb) return;
+  const data = new Date().toLocaleDateString('pt-BR');
+  let h = `<h1>${esc(estado.evento || 'Torneio de Peteca')}</h1><div>${data}</div>`;
+  h += `<h2>Duplas</h2><table><tr><th>#</th><th>Dupla</th></tr>${estado.duplas.map((d, i) => `<tr><td>${i + 1}</td><td>${esc(nomeDupla(d))}</td></tr>`).join('')}</table>`;
+  if (tb.formato === 'chaves') {
+    h += tb.grupos.map((g, i) => `<h2>${rotuloChave(i)}</h2><table>${g.map(id => `<tr><td>${esc(nomeDupla(duplaPorId(id)))}</td><td style="width:60px">V: ___</td><td style="width:90px">Saldo: ___</td></tr>`).join('')}</table>`).join('');
+  }
+  h += `<h2 class="quebra">Súmula de jogos</h2><table><tr><th>Jogo</th>${tb.formato === 'chaves' ? '<th>Chave</th>' : ''}<th>Dupla</th><th>Placar</th><th>Dupla</th></tr>`;
+  h += tb.jogos.map((j, i) => `<tr><td>${i + 1}</td>${tb.formato === 'chaves' ? `<td>${LETRAS[j.chave]}</td>` : ''}<td>${esc(nomeDupla(duplaPorId(j.a)))}</td><td class="placar">____ × ____</td><td>${esc(nomeDupla(duplaPorId(j.b)))}</td></tr>`).join('');
+  h += `</table><h2>Fase final</h2><table><tr><th>Jogo</th><th>Dupla</th><th>Placar</th><th>Dupla</th></tr>${['Semifinal 1', 'Semifinal 2', 'Final'].map(f => `<tr><td>${f}</td><td>&nbsp;</td><td class="placar">____ × ____</td><td>&nbsp;</td></tr>`).join('')}</table>`;
+  document.getElementById('impressao').innerHTML = h;
+}
+
+/* ---------- Rodapé e render geral ---------- */
+function renderRodape() {
+  const r = document.getElementById('rodape');
+  if (estado.aba === 'jogadores') {
+    const ok = nomesLimpos('colA').length && nomesLimpos('colB').length && !encontrarRepetidos(nomesLimpos('colA'), nomesLimpos('colB')).size;
+    r.innerHTML = `<button class="btn pri" ${ok ? '' : 'disabled'} onclick="sortearDuplas(${estado.duplas.length ? 'true' : 'false'})">🎲 ${estado.duplas.length ? 'Sortear duplas de novo' : 'Sortear duplas'}</button>`
+      + (estado.duplas.length ? `<button class="btn" onclick="irPara('duplas')">Ver duplas →</button>` : '');
+  } else if (estado.aba === 'duplas') {
+    r.innerHTML = `<button class="btn" onclick="irPara('jogadores')">← Nomes</button><button class="btn pri" onclick="irPara('jogos')">Montar jogos →</button>`;
+  } else {
+    r.innerHTML = `<button class="btn" onclick="irPara('duplas')">← Duplas</button>`;
+  }
+}
+function render() {
+  document.getElementById('tab-duplas').disabled = !estado.duplas.length;
+  document.getElementById('tab-jogos').disabled = !estado.duplas.length;
+  if (estado.aba === 'jogadores') renderJogadores();
+  if (estado.aba === 'duplas') renderDuplas();
+  if (estado.aba === 'jogos') renderJogos();
+  renderRodape();
+}
+
+carregar();
+irPara(estado.duplas.length ? estado.aba : 'jogadores');
+</script>
+</body>
+</html>
